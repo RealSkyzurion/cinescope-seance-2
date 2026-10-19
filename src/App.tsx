@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import posterAube from "./assets/aube.svg";
 import posterMemoire from "./assets/memoire.svg";
 import posterOrbite from "./assets/orbite.svg";
@@ -14,6 +14,7 @@ export default function App() {
   const [selected, setSelected] = useState<string | null>(null);
   const selectedFilm = films.find((film) => film.title === selected);
   const [favorites, setFavorites] = useState<number[]>([]);
+  const openerRef = useRef<HTMLButtonElement | null>(null);
   const filteredFilms = useMemo(
     () => films.filter((film) => film.title.toLowerCase().includes(query.toLowerCase())),
     [query],
@@ -24,7 +25,7 @@ export default function App() {
 
   return (
     <>
-      <header className="topbar">
+      <header className="topbar" inert={!!selected}>
         <a className="brand" href="#programme" onClick={() => setQuery("")}>CinéScope</a>
         <nav aria-label="Navigation principale">
           <ul className="menu">
@@ -33,7 +34,7 @@ export default function App() {
           </ul>
         </nav>
       </header>
-      <main className="page">
+      <main className="page" inert={!!selected}>
         <h1>Films à l’affiche</h1>
         <p className="intro">Découvrez la programmation de cette semaine.</p>
         <div className="search-field">
@@ -56,7 +57,7 @@ export default function App() {
                     <h3>{film.title}</h3>
                     <p>{film.genre} · {film.time}</p>
                     <div className="actions">
-                      <div className="booking-trigger fake-button" onClick={() => setSelected(film.title)}>Réserver {film.title}</div>
+                      <button type="button" className="booking-trigger" onClick={(e) => { openerRef.current = e.currentTarget; setSelected(film.title); }}>Réserver {film.title}</button>
                       <button type="button" className="favorite" aria-pressed={isFavorite}
                         aria-label={"Favori : " + film.title} onClick={() => toggleFavorite(film.id)}>
                         <span aria-hidden="true">{isFavorite ? "★" : "☆"}</span>
@@ -73,23 +74,23 @@ export default function App() {
           <h2 id="infos-title">Informations pratiques</h2>
           <p>Le cinéma ouvre trente minutes avant la première séance.</p>
         </section>
-        {selectedFilm && (
-          <div className="backdrop">
-            <div className="modal">
-              <div className="dialog-heading">
-                <h2>Réserver {selected}</h2>
-                <span className="close" onClick={() => setSelected(null)}>×</span>
-              </div>
-              <p>{selectedFilm.genre} · Séance de {selectedFilm.time}</p>
-              <p className={"availability " + (selectedFilm.available ? "available" : "unavailable")}>
-                {selectedFilm.available ? "Places disponibles" : "Séance complète"}
-              </p>
-              <p>Consultez la séance et sa disponibilité avant de revenir au programme.</p>
-              <button className="dialog-action" type="button" onClick={() => setSelected(null)}>Revenir aux films</button>
-            </div>
-          </div>
-        )}
       </main>
+      {selectedFilm && (
+        <div className="backdrop" onKeyDown={(e) => { if (e.key === "Escape") { setSelected(null); openerRef.current?.focus(); } }}>
+          <div className="modal" role="dialog" aria-labelledby="modal-title" aria-modal="true">
+            <div className="dialog-heading">
+              <h2 id="modal-title">Réserver {selected}</h2>
+              <button type="button" className="close" aria-label="Fermer" autoFocus onClick={() => { setSelected(null); openerRef.current?.focus(); }}>×</button>
+            </div>
+            <p>{selectedFilm.genre} · Séance de {selectedFilm.time}</p>
+            <p className={"availability " + (selectedFilm.available ? "available" : "unavailable")}>
+              {selectedFilm.available ? "Places disponibles" : "Séance complète"}
+            </p>
+            <p>Consultez la séance et sa disponibilité avant de revenir au programme.</p>
+            <button className="dialog-action" type="button" onClick={() => { setSelected(null); openerRef.current?.focus(); }}>Revenir aux films</button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
